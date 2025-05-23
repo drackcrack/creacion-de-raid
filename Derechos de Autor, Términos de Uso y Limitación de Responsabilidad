@@ -1,0 +1,37 @@
+: '
+################################################################################
+#  Script de Gestión RAID con Zenity                                            #
+#  Autor: Drack Crack                                                           #
+#  Año: 2025                                                                   #
+#                                                                              #
+#  Derechos de Autor y Condiciones de Uso:                                    #
+#  --------------------------------------------------------------------------  #
+#  © 2025 Drack Crack. Todos los derechos reservados.                          #
+#                                                                              #
+#  Propiedad Intelectual:                                                      #
+#  Este script y todo su contenido son propiedad exclusiva de Drack Crack.     #
+#                                                                              #
+#  Uso Permitido:                                                              #
+#  Puede usarse, copiarse y modificarse para fines educativos, administrativos #
+#  y de auditoría, siempre respetando las condiciones aquí expresadas.        #
+#                                                                              #
+#  Restricciones:                                                              #
+#  - Prohibido usar este software para actividades ilegales o no autorizadas.  #
+#  - No se permite redistribuir sin mencionar al autor original.              #
+#                                                                              #
+#  Reconocimiento:                                                             #
+#  En caso de distribución o derivación, se debe reconocer a Drack Crack como  #
+#  autor original del script.                                                  #
+#                                                                              #
+#  Limitación de Responsabilidad:                                              #
+#  Este script se ofrece "tal cual", sin garantía alguna.                      #
+#  Drack Crack no se responsabiliza por daños directos o indirectos derivados  #
+#  del uso, mal uso o incapacidad para usar este script o los datos que genere.#
+#                                                                              #
+#  Cumplimiento Legal:                                                         #
+#  El usuario se compromete a cumplir todas las leyes vigentes relacionadas    #
+#  con el uso del script y sus funciones.                                      #
+#                                                                              #
+#  Al ejecutar o modificar este script, usted acepta estas condiciones.        #
+################################################################################
+'
