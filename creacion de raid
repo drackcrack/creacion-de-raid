@@ -1,0 +1,116 @@
+#!/bin/bash
+
+# Instalar dependencias necesarias automáticamente
+instalar_dependencias() {
+  DEPENDENCIAS=(zenity mdadm lsblk coreutils)
+
+  echo "🔍 Verificando dependencias..."
+  for pkg in "${DEPENDENCIAS[@]}"; do
+    if ! dpkg -s "$pkg" &> /dev/null; then
+      echo "📦 Instalando $pkg..."
+      apt-get update && apt-get install -y "$pkg"
+    fi
+  done
+}
+
+check_root() {
+  if [[ $EUID -ne 0 ]]; then
+    zenity --error --text="Este script debe ejecutarse como root."
+    exit 1
+  fi
+}
+
+# Mostrar lista de discos disponibles
+seleccionar_discos() {
+  local opciones=()
+  while read -r line; do
+    NAME=$(echo "$line" | awk '{print $1}')
+    SIZE=$(echo "$line" | awk '{print $2}')
+    opciones+=("FALSE" "/dev/$NAME" "$SIZE")
+  done < <(lsblk -dno NAME,SIZE,TYPE | grep "disk")
+
+  SELECCIONADOS=$(zenity --list --checklist \
+    --title="Selecciona los discos para el RAID" \
+    --text="Marca los discos a usar" \
+    --column="Usar" --column="Disco" --column="Tamaño" \
+    "${opciones[@]}" \
+    --width=500 --height=300)
+
+  echo "$SELECCIONADOS"
+}
+
+crear_raid() {
+  DISK_SELECTION=$(seleccionar_discos)
+  if [ -z "$DISK_SELECTION" ]; then
+    zenity --error --text="No seleccionaste ningún disco."
+    return
+  fi
+
+  IFS="|" read -ra DISK_LIST <<< "$DISK_SELECTION"
+  NUM_DISCOS=${#DISK_LIST[@]}
+
+  RAID_LEVEL=$(zenity --entry --title="Nivel RAID" --text="Nivel de RAID (0,1,5,10...)" --entry-text="0")
+  RAID_DEVICE=$(zenity --entry --title="Nombre RAID" --text="Nombre del dispositivo RAID (ej: /dev/md0):" --entry-text="/dev/md0")
+  FILESYSTEM=$(zenity --entry --title="Sistema de archivos" --text="Tipo de FS (ext4, xfs...)" --entry-text="ext4")
+  MOUNT_POINT=$(zenity --entry --title="Punto de montaje" --text="Dónde montar (ej: /mnt/raid):" --entry-text="/mnt/raid")
+
+  for d in "${DISK_LIST[@]}"; do
+    mdadm --zero-superblock --force "$d"
+  done
+
+  yes | mdadm --create --verbose "$RAID_DEVICE" --level=$RAID_LEVEL --raid-devices=$NUM_DISCOS --bitmap=internal "${DISK_LIST[@]}"
+  sleep 5
+
+  if [ ! -e "$RAID_DEVICE" ]; then
+    zenity --error --text="No se pudo crear el RAID."
+    return
+  fi
+
+  mkfs.$FILESYSTEM "$RAID_DEVICE"
+  mkdir -p "$MOUNT_POINT"
+  mount "$RAID_DEVICE" "$MOUNT_POINT"
+
+  zenity --info --text="✅ RAID creado y montado correctamente en $MOUNT_POINT"
+
+  # Nuevo: mostrar panel con estado del RAID
+  RAID_STATUS=$(mdadm --detail "$RAID_DEVICE")
+  zenity --info --width=600 --height=400 --title="Estado del RAID" \
+    --text="🧠 Información del RAID:\n\n$RAID_STATUS"
+}
+
+desmontar_raid() {
+  RAID_DEVICE=$(zenity --entry --title="Desmontar RAID" --text="Nombre del dispositivo RAID (ej: /dev/md0):")
+  MOUNT_POINT=$(zenity --entry --title="Punto de Montaje" --text="Punto de montaje (ej: /mnt/raid):")
+
+  umount "$MOUNT_POINT"
+  mdadm --stop "$RAID_DEVICE"
+
+  DISK_SELECTION=$(seleccionar_discos)
+  IFS="|" read -ra DISK_LIST <<< "$DISK_SELECTION"
+
+  for d in "${DISK_LIST[@]}"; do
+    mdadm --zero-superblock --force "$d"
+  done
+
+  rm -rf "$MOUNT_POINT"
+  zenity --info --text="🧹 RAID desmontado y limpiado."
+}
+
+# Ejecutar
+instalar_dependencias
+check_root
+
+# Panel principal
+while true; do
+  OPCION=$(zenity --list --title="🛠️ Panel RAID" --column="Acción" \
+    "Crear RAID" \
+    "Desmontar RAID" \
+    "Salir" --width=300 --height=200)
+
+  case "$OPCION" in
+    "Crear RAID") crear_raid ;;
+    "Desmontar RAID") desmontar_raid ;;
+    "Salir") break ;;
+    *) zenity --error --text="Opción no válida." ;;
+  esac
+done
